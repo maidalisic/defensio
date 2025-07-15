@@ -1,0 +1,51 @@
+# Standard-LaTeX-Hilfsdateien
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.nav
+*.snm
+*.vrb
+*.bbl
+*.blg
+*.brf
+*.idx
+*.ilg
+*.ind
+*.lof
+*.loa
+*.thm
+*.xdv
+
+# latexmk / arara / rubber
+*.dvi
+*.ps
+*.run.xml
+
+# temporäre Editoren-Dateien
+*~
+*.bak
+*.swp
+*.swo
+.DS_Store
+
+# TeXstudio / Kile / TeXShop etc.
+*.backup
+*.synctex.gz(busy)
+*.pdfsync
+
+# TikZ externalization cache
+tikz_cache/
+*.dpth
+*.md5
+
+# ggf. lokal erzeugte Verzeichnisse
+_build/
+output/
+tmp/
