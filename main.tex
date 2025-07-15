@@ -1,34 +1,58 @@
 % !TEX TS-program = pdflatex
-\documentclass[14pt,aspectratio=169]{beamer}
+\documentclass[14pt,aspectratio=169,draft]{beamer}
 \usetheme{metropolis}
 \metroset{progressbar=frametitle}
-
-\newcommand{\circledone}{
-  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){1};
-}
-
-\newcommand{\circledtwo}{
-  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){2};
-}
-
-\newcommand{\circledthree}{
-  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){3};
-}
+\usepackage{pifont}
 
 % -------------------------------------------------------------- %
-% PACKAGES \& GLOBAL SETTINGS                                     %
+% ENCODING                                                         %
 % -------------------------------------------------------------- %
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
 
+% -------------------------------------------------------------- %
+% TikZ & helper libraries (ohne shadows.blur)                     %
+% -------------------------------------------------------------- %
 \usepackage{tikz,adjustbox}
-\usetikzlibrary{positioning,arrows.meta,shadows.blur,fit}
+\usetikzlibrary{positioning,arrows.meta,fit}
+
+% ----------------------------------------------------------------
+% Befehle für eingerahmte Ziffern
+% ----------------------------------------------------------------
+\newcommand{\circledone}{%
+  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){1};%
+}
+\newcommand{\circledtwo}{%
+  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){2};%
+}
+\newcommand{\circledthree}{%
+  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){3};%
+}
+
+% -------------------------------------------------------------- %
+% PGFPlots                                                           %
+% -------------------------------------------------------------- %
 \usepackage{pgfplots}
-\pgfplotsset{compat=newest}
+\pgfplotsset{
+  compat=newest,
+  plot coordinates/math parser=false % schneller, wenn du fixe Koordinaten hast
+}
+
+% -------------------------------------------------------------- %
+% MATH & ABBREVIATIONS                                               %
+% -------------------------------------------------------------- %
 \usepackage{amsmath,physics,xspace}
 
-% ---------------- TikZ helper styles --------------------------- %
+\newcommand{\tfidf}{TF-IDF\xspace}
+\newcommand{\TFIDF}{Term-Frequency-Inverse-Document-Frequency\xspace}
+\newcommand{\IForest}{Isolation-Forest\xspace}
+\newcommand{\RForest}{Random-Forest\xspace}
+\newcommand{\LOC}{Lines of Code\xspace}
+
+% -------------------------------------------------------------- %
+% TikZ‑Stile                                                         %
+% -------------------------------------------------------------- %
 \tikzset{
   box/.style = {rectangle, draw, rounded corners=3pt,
                 text width = 4.5cm, align = center,
@@ -39,14 +63,9 @@
   lab/.style  = {font=\scriptsize, sloped, anchor=south, midway}
 }
 
-% ---------------- Short-cuts / Symbols ------------------------- %
-\newcommand{\tfidf}{TF-IDF\xspace}   % nach Erst-Erwähnung erlaubt
-\newcommand{\TFIDF}{Term-Frequency-Inverse-Document-Frequency\xspace}
-\newcommand{\IForest}{Isolation-Forest\xspace}
-\newcommand{\RForest}{Random-Forest\xspace}
-\newcommand{\LOC}{Lines of Code\xspace}
-
-% ---------------- Titelinformationen --------------------------- %
+% -------------------------------------------------------------- %
+% Titelinformationen                                                 %
+% -------------------------------------------------------------- %
 \title{Automated Log Diagnosis in CI/CD Pipelines}
 \subtitle{Bachelor Thesis - Defence}
 \author{Maid Alisi\'c}
@@ -59,7 +78,6 @@
 
 \maketitle
 
-% --------------------------------------------------------------- %
 \begin{frame}{Agenda}
 \tableofcontents[
   hideallsubsections,
@@ -67,7 +85,6 @@
 ]
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Problem Context}
 \begin{frame}{Why do we care?}
 \begin{itemize}[<+->]
@@ -78,7 +95,6 @@
 \end{itemize}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \begin{frame}{Operational pain points}
 \begin{enumerate}[<+->]
   \item \textbf{Context sensitivity} - same token can be harmless or fatal.
@@ -88,7 +104,6 @@
 \end{enumerate}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Research Questions}
 \begin{frame}{Research questions (thesis)}
 \begin{description}[<+->]
@@ -99,7 +114,6 @@
 \end{description}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Data \& Experimental Design}
 \begin{frame}{Datasets \& metrics}
 \begin{columns}
@@ -126,9 +140,8 @@
 \end{columns}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Method - Feature Engineering}
-\begin{frame}{Vectorisation step \circledone - TF-IDF}
+\begin{frame}{Vectorisation step \ding{172} – TF-IDF}
 \small
 \begin{enumerate}[<+->]
   \item \textbf{Normalisation:} remove timestamps, colours, IDs; lowercase.
@@ -152,8 +165,7 @@
 \end{frame}
 
 % --------------------------------------------------------------- %
-\section{Method - Algorithm \circledtwo}
-% \section{Method - Algorithm}
+\section{Method - Algorithm \ding{173}}
 \begin{frame}{How Isolation-Forest detects outliers}
 \begin{columns}
 \column{0.55\linewidth}
@@ -180,9 +192,7 @@
 \end{columns}
 \end{frame}
 
-% --------------------------------------------------------------- %
-\section{Method - Algorithm \circledthree}
-% \section{Method - Algorithm }
+\section{Method - Algorithm \ding{174}}
 \begin{frame}{Why add a Random-Forest classifier?}
 \begin{columns}
 \column{0.53\linewidth}
@@ -214,13 +224,11 @@
 \end{columns}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Architecture}
 \begin{frame}{End-to-end pipeline (< 40 ms inline)}
 \centering
 \begin{adjustbox}{max width=.9\linewidth, max height=.7\textheight}
 \begin{tikzpicture}[node distance=1.2cm and 1.8cm]
-  % inline
   \node[box] (raw){Raw log stream};
   \node[box,below=of raw] (norm){Normalise text};
   \node[box,below=of norm] (vect){Tokenise\\\TFIDF};
@@ -233,26 +241,20 @@
   \draw[arr](ifor)--node[lab]{score$<\tau$}(pass);
   \draw[arr](ifor)--node[lab]{score$\ge\tau$}(rfor)--(json);
 
-  % nightly
   \node[side,right=3.7cm of vect] (cron){Nightly GitLab job};
   \node[side,below=of cron] (train){Retrain IF\\RF};
   \draw[arr,dashed](cron)--(train);
   \draw[arr,dashed](train.west)+(-.2,.15)|-(ifor.east);
   \draw[arr,dashed](train.west)+(-.2,-.15)|-(rfor.east);
 
-  % frames
   \node[draw,rounded corners=4pt,inner xsep=12pt,inner ysep=9pt,
         fit=(raw)(json),label=above:{\footnotesize\bfseries Inline path (< 40 ms)}]{};
   \node[draw,rounded corners=4pt,inner sep=4pt,fit=(cron)(train),
         label=above:{\footnotesize\bfseries Nightly adaptation}]{};
 \end{tikzpicture}
 \end{adjustbox}
-
-\vspace{0.35em}
-{\scriptsize 30 µs per line in IF • overall 37 ms @ p99.9}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Results}
 \begin{frame}{Headline numbers}
 \begin{columns}
@@ -285,7 +287,6 @@
 \end{columns}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Impact}
 \begin{frame}{Organisation-level benefits}
 \begin{itemize}[<+->]
@@ -296,7 +297,6 @@
 \end{itemize}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Limitations \& Roadmap}
 \begin{frame}{Limitations \& next steps}
 \begin{itemize}[<+->]
@@ -307,7 +307,6 @@
 \end{itemize}
 \end{frame}
 
-% --------------------------------------------------------------- %
 \section{Wrap-up}
 \begin{frame}{Take-away}
 \vspace{1em}
@@ -323,7 +322,5 @@ without latency, cost or data-protection pain.
 Questions welcome - thank you!
 \end{center}
 \end{frame}
-
-% --------------------------------------------------------------- %
 
 \end{document}
