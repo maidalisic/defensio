@@ -17,19 +17,6 @@
 \usepackage{tikz,adjustbox}
 \usetikzlibrary{positioning,arrows.meta,fit}
 
-% ----------------------------------------------------------------
-% Befehle für eingerahmte Ziffern
-% ----------------------------------------------------------------
-\newcommand{\circledone}{%
-  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){1};%
-}
-\newcommand{\circledtwo}{%
-  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){2};%
-}
-\newcommand{\circledthree}{%
-  \tikz[baseline=(char.base)]\node[draw,circle,inner sep=1pt](char){3};%
-}
-
 % -------------------------------------------------------------- %
 % PGFPlots                                                           %
 % -------------------------------------------------------------- %
@@ -66,10 +53,10 @@
 % -------------------------------------------------------------- %
 % Titelinformationen                                                 %
 % -------------------------------------------------------------- %
-\title{Automated Log Diagnosis in CI/CD Pipelines}
+\title{Use of AI for log analysis in CI/CD pipelines}
 \subtitle{Bachelor Thesis - Defence}
-\author{Maid Alisi\'c}
-\institute{University of Applied Sciences Upper Austria}
+\author{Maid Ališi\'c}
+\institute{University of Applied Sciences Upper Austria, Campus Hagenberg}
 \date{23 July 2025}
 
 % =============================================================== %
@@ -77,13 +64,6 @@
 % =============================================================== %
 
 \maketitle
-
-\begin{frame}{Agenda}
-\tableofcontents[
-  hideallsubsections,
-  sections={1,...,9}
-]
-\end{frame}
 
 \section{Problem Context}
 \begin{frame}{Why do we care?}
@@ -112,32 +92,6 @@
   \item[RQ2] How does a \textbf{local} stack (\IForest + \RForest) compare with the cloud LLM?
   \item[RQ3] Which practical hurdles arise when embedding both approaches into existing pipelines?
 \end{description}
-\end{frame}
-
-\section{Data \& Experimental Design}
-\begin{frame}{Datasets \& metrics}
-\begin{columns}
-\column{0.55\linewidth}
-\begin{itemize}[<+->]
-  \item 117 k macOS system log lines
-  \item 655 k OpenSSH authentication lines
-  \item 504 ground-truth anomalies
-  \item Split 70 / 15 / 15 \% (train / validation / test)
-  \item Metrics: Macro-F\textsubscript{1}, Area under PR curve, 99.9 \% latency
-\end{itemize}
-
-\column{0.45\linewidth}
-\centering
-\begin{adjustbox}{max width=\linewidth}
-\begin{tikzpicture}[node distance=0.9cm]
-\node[box,text width=3cm] (raw){raw logs};
-\node[box,below=of raw] (norm){normalise};
-\node[box,below=of norm] (vec){TF-IDF};
-\draw[arr](raw)--(norm)--(vec);
-% \node at ($(vec)!0.5!(raw)+(3.6,0)$) {\footnotesize 50 k-dim.\ sparse};
-\end{tikzpicture}
-\end{adjustbox}
-\end{columns}
 \end{frame}
 
 \section{Method - Feature Engineering}
@@ -253,6 +207,32 @@
         label=above:{\footnotesize\bfseries Nightly adaptation}]{};
 \end{tikzpicture}
 \end{adjustbox}
+\end{frame}
+
+\section{Data \& Experimental Design}
+\begin{frame}{Datasets \& metrics}
+\begin{columns}
+\column{0.55\linewidth}
+\begin{itemize}[<+->]
+  \item 117 k macOS system log lines
+  \item 655 k OpenSSH authentication lines
+  \item 504 ground-truth anomalies
+  \item Split 70 / 15 / 15 \% (train / validation / test)
+  \item Metrics: Macro-F\textsubscript{1}, Area under PR curve, 99.9 \% latency
+\end{itemize}
+
+\column{0.45\linewidth}
+\centering
+\begin{adjustbox}{max width=\linewidth}
+\begin{tikzpicture}[node distance=0.9cm]
+\node[box,text width=3cm] (raw){raw logs};
+\node[box,below=of raw] (norm){normalise};
+\node[box,below=of norm] (vec){TF-IDF};
+\draw[arr](raw)--(norm)--(vec);
+% \node at ($(vec)!0.5!(raw)+(3.6,0)$) {\footnotesize 50 k-dim.\ sparse};
+\end{tikzpicture}
+\end{adjustbox}
+\end{columns}
 \end{frame}
 
 \section{Results}
