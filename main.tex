@@ -1,323 +1,429 @@
 % !TEX TS-program = pdflatex
-\documentclass[14pt,aspectratio=169]{beamer}  % <-- draft entfernt
+\documentclass[15pt,aspectratio=169]{beamer}
+% ------------------------------------------------------------------
+% Theme \& visual tweaks
+% ------------------------------------------------------------------
 \usetheme{metropolis}
 \metroset{progressbar=frametitle}
-\usepackage{pifont}
-
-% -------------------------------------------------------------- %
-% ENCODING                                                      %
-% -------------------------------------------------------------- %
+% Slightly darker boxes for better contrast
+\definecolor{blockgray}{RGB}{225,225,225}  % ~20 % gray
+% --------------------------------------------------------------
+% Encoding \& fonts
+% --------------------------------------------------------------
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
+\usepackage{pifont}
+\usepackage{booktabs}
 
-% -------------------------------------------------------------- %
-% TikZ \& helper libraries (ohne shadows.blur)                    %
-% -------------------------------------------------------------- %
+\usepackage{fontawesome5}  % for simple professional icons
+
+% --------------------------------------------------------------
+% TikZ \& PGFPlots
+% --------------------------------------------------------------
 \usepackage{tikz,adjustbox}
-\usetikzlibrary{positioning,arrows.meta,fit}
-
-% -------------------------------------------------------------- %
-% PGFPlots                                                      %
-% -------------------------------------------------------------- %
+\usetikzlibrary{positioning,arrows.meta,fit, calc,trees}
 \usepackage{pgfplots}
 \pgfplotsset{compat=newest,plot coordinates/math parser=false}
 
-% -------------------------------------------------------------- %
-% MATH \& ABBREVIATIONS                                           %
-% -------------------------------------------------------------- %
+% --------------------------------------------------------------
+% Maths \& abbreviations
+% --------------------------------------------------------------
 \usepackage{amsmath,physics,xspace}
-
 \newcommand{\tfidf}{TF-IDF\xspace}
 \newcommand{\TFIDF}{Term-Frequency-Inverse-Document-Frequency\xspace}
-\newcommand{\IForest}{Isolation-Forest\xspace}
-\newcommand{\RForest}{Random-Forest\xspace}
-\newcommand{\LOC}{Lines of Code\xspace}
+\newcommand{\IForest}{Isolation Forest\xspace}
+\newcommand{\RForest}{Random Forest\xspace}
+\newcommand{\LOC}{lines of code\xspace}
 
-% -------------------------------------------------------------- %
-% TikZ-Stile                                                     %
-% -------------------------------------------------------------- %
+% --------------------------------------------------------------
+% TikZ box styles (updated grey)
+% --------------------------------------------------------------
 \tikzset{
   box/.style = {rectangle, draw, rounded corners=3pt,
                 text width = 4.6cm, align = center,
                 minimum height = 1.05cm,
-                font = \small, fill = gray!6},
+                font = \small, fill = blockgray},
   side/.style = {box, text width = 3.8cm, fill = blue!7},
   arr/.style  = {-{Stealth[length=3mm,width=2mm]}, thick},
   lab/.style  = {font=\scriptsize, sloped, anchor=south, midway}
 }
 
-% -------------------------------------------------------------- %
-% Titelinformationen                                             %
-% -------------------------------------------------------------- %
+% --------------------------------------------------------------
+% Meta data
+% --------------------------------------------------------------
 \title{Use of AI for Log Analysis in CI/CD Pipelines}
 \subtitle{Bachelor Thesis - Defence}
 \author{Maid Ališi\'c}
-\institute{University of Applied Sciences Upper Austria, Campus Hagenberg}
+\institute{FH Oberösterreich · Campus Hagenberg}
 \date{23 July 2025}
 
-% =============================================================== %
+% ==============================================================
 \begin{document}
-% =============================================================== %
+% ==============================================================
 
+% ----------------------------------------------------------------
+% Title slide
+% ----------------------------------------------------------------
 \maketitle
 
-\section{Problem Context}
+% ----------------------------------------------------------------
+% Agenda slide
+% ----------------------------------------------------------------
+\begin{frame}{Road map}
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+% ================================================================
+\section{Problem context}
+% ================================================================
+
 \begin{frame}{Why do we care?}
 \begin{itemize}[<+->]
-  \item CI/CD emits \alert{$\approx$ 10-20 GB} build, test \& deploy logs every day.
-  \item Manual grepping is slow $\xrightarrow{}$ merge queue stalls, silent faults creep in.
-  \item Service-level objective: deliver a verdict inside \alert{ $\leq$ 200 ms}.
-  \item Logs can contain customer identifiers $\xrightarrow{}$ \textbf{no SaaS export}.
+  \item CI/CD emits \alert{$\approx$ 10-20 GB} of build, test \& deploy logs \textit{per day}. 
+  \item Manual \texttt{grep} slows the merge queue; critical faults slip through.
+  \item Business \textbf{SLO}: feedback within \alert{\(\le\) 200 ms} per pipeline.
+  \item Logs can leak customer IDs $\rightarrow$ \textbf{no SaaS export}.
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Operational pain points}
 \begin{enumerate}[<+->]
-  \item \textbf{Context sensitivity} - same token can be harmless or fatal.
-  \item \textbf{Concept drift} - every merge may rename tests or flags.
-  \item \textbf{Latency pressure} - analysis must end before runner teardown.
-  \item \textbf{Alert fatigue} - static regex rules explode over time.
+  \item \textbf{Context-sensitivity} - identical tokens can be harmless or fatal.
+  \item \textbf{Concept drift} - each merge may rename tests or switches.
+  \item \textbf{Latency pressure} - analysis must finish before runner teardown.
+  \item \textbf{Alert fatigue} - regex rule sets grow without bound.
 \end{enumerate}
 \end{frame}
 
-% --------------------------------------------------------------- %
-\section{Research Questions}
-\begin{frame}{Research questions (thesis)}
-\begin{description}[<+->]
-  \item[RQ\textsubscript{main}] How can AI improve \emph{accuracy \& explainability} of CI/CD log analysis?
-  \item[RQ1] To what extent can an \textbf{LLM service} (ChatGPT API) automate log interpretation?
-  \item[RQ2] How does a \textbf{local} stack (\IForest + \RForest) compare with the cloud LLM?
-  \item[RQ3] Which practical hurdles arise when embedding both approaches into existing pipelines?
-\end{description}
+% ================================================================
+\section{Research questions}
+% ================================================================
+
+% --- visual RQ tree ------------------------------------------------
+
+\begin{frame}{Research questions}
+  \centering
+  \begin{tikzpicture}[
+      grow=down,                             % Baum wächst nach unten
+      level distance=2.8cm,                  % vertikaler Abstand der Ebenen
+      level 1/.style={sibling distance=4.8cm},% horizontaler Abstand der 3 Kinder
+      box/.style = {rectangle, draw, rounded corners=3pt,
+                    text width = 4.6cm, align = center,
+                    minimum height = 1.05cm,
+                    font = \small, fill = blockgray},
+      arr/.style = {-{Stealth[length=3mm,width=2mm]}, thick}
+    ]
+    \node[box,text width=5cm] (main)
+      {\textbf{RQ\textsubscript{main}}:\\[2pt]
+       How can AI improve accuracy \& explainability\\
+       of CI/CD log analysis?}
+      child {
+        node[box,text width=4.3cm]
+          {\textbf{RQ1}: Capability of a cloud LLM (ChatGPT)\\to interpret logs}
+      }
+      child {
+        node[box,text width=4.3cm]
+          {\textbf{RQ2}: How does a local IF+RF stack compare?}
+      }
+      child {
+        node[box,text width=4.3cm]
+          {\textbf{RQ3}: Integration hurdles inside existing pipelines}
+      }
+    ;
+  \end{tikzpicture}
 \end{frame}
 
-% --------------------------------------------------------------- %
-\section{Method - Feature Engineering}
 
-\begin{frame}{Vectorisation step \ding{172} - TF-IDF}
-\small
-\begin{enumerate}[<+->]
-  \item \textbf{Normalisation:} remove timestamps, colours, IDs; lowercase.
-  \item \textbf{Tokenise} + generate 1-2-grams.
-  \item Compute weights:
-        \begin{equation*}
-            w_{t,d}= \mathrm{tf}_{t,d}\cdot
-            \log\frac{N}{\mathrm{df}_t}
-            \hspace*{2cm}
-            \begin{minipage}[t]{0.48\linewidth}
-                \footnotesize\raggedright
-                $w_{t,d}$ - weight of term $t$ in document $d$\\
-                $\mathrm{tf}_{t,d}$ - raw term frequency in $d$\\
-                $N$ - total number of documents (log lines)\\
-                $\mathrm{df}_t$ - number of documents that contain $t$
-            \end{minipage}
-            \end{equation*}
-  \item Result: 50 k-dimensional sparse matrix;  
-        $\approx$ 100 000 lines /s on a single core.
-\end{enumerate}
 
-\vspace{0.4em}
-\centering
-\begin{tikzpicture}[node distance=1.1cm]
-  \node[box,text width=2.9cm] (txt){log line};
-  \node[box,right=2.6cm of txt,text width=2.9cm] (vec){sparse vector};
-  \draw[arr](txt)--(vec);
-\end{tikzpicture}
-\end{frame}
+% ================================================================
+\section{Method}
+% ================================================================
 
-% --------------------------------------------------------------- %
-\section{Method - Algorithm \ding{173}}
-\begin{frame}{How Isolation-Forest detects outliers}
+\subsection{Feature engineering}
+\begin{frame}{Vectorisation pipeline \ding{172}}
 \begin{columns}
-\column{0.55\linewidth}
-\begin{itemize}[<+->]
-  \item Randomly split feature space into binary trees.
-  \item Rare / unusual points are isolated \emph{early}.  
-        Path length \(h(x)\) $\rightarrow{}$ anomaly score  
-        \(s(x)=2^{-h(x)/c(n)}\).
-  \item CPU-friendly: 30 µs per line, no GPU.
-\end{itemize}
-
-\column{0.45\linewidth}
-\centering
-\begin{adjustbox}{max width=\linewidth}
-\begin{tikzpicture}[scale=.9,every node/.style={font=\scriptsize}]
-  \draw[fill=gray!15] (0,0) rectangle (3,3);
-  \node at (1.5,3.2){feature 1};
-  \node[box,minimum width=1cm,minimum height=.8cm] (p1) at (0.6,.7){outlier};
-  \node[box,minimum width=1cm,minimum height=.8cm] (p2) at (2.4,2.3){normal};
-  \draw[dashed] (1.2,0)--(1.2,3) (0,1.8)--(3,1.8);
-  \node[anchor=west] at (3.2,1.4){few splits $\rightarrow$ high score};
-\end{tikzpicture}
-\end{adjustbox}
+  \column{.55\linewidth}
+    \begin{enumerate}[<+->]
+      \item \textbf{Normalise} - strip timestamps, colours, IDs.
+      \item \textbf{Tokenise} - 1-2-grams.
+      \item Weight with \tfidf.
+      \item Produce \(50\,000\)-dim sparse vector; \(>10^{5}\) lines / s on one core.
+    \end{enumerate}
+  \column{.45\linewidth}
+    \centering
+    \begin{tikzpicture}[node distance=1.1cm]
+      \node[box,text width=2cm]{log line};
+      \node[box,right=1.2cm of {$(current bounding box.east)!0.5!(current bounding box.east)$},text width=2.4cm] (vec){sparse vector};
+      \draw[arr] (1.1,0) -- (vec.west);
+    \end{tikzpicture}
 \end{columns}
 \end{frame}
 
-% --------------------------------------------------------------- %
-\section{Method - Algorithm \ding{174}}
-\begin{frame}{Why add a Random-Forest classifier?}
-\begin{columns}
-\column{0.53\linewidth}
-\begin{enumerate}[<+->]
-  \item \IForest says \emph{“something odd”}. Operators still ask \emph{“why?”}
-  \item \RForest majority vote assigns one of seven error categories.
-  \item Per-token feature importance allows future visual highlights.
-  \item Nightly training < 90 s (400 trees, depth 30).
-\end{enumerate}
+% \subsection{Algorithms}
+% \begin{frame}{Isolation Forest \ding{173} - intuition}
+% \begin{columns}
+%   \column{.55\linewidth}
+%   \begin{itemize}[<+->]
+%     \item Random binary partitioning isolates unusual lines in fewer splits.
+%     \item Score \(s(x)=2^{-h(x)/c(n)}\) $\in$ [0,1] \\ if high $\rightarrow$ outlier.
+%     \item CPU-only: \( \approx 30\,\mu s\) per line.
+%   \end{itemize}
+%   \column{.45\linewidth}
+%     \centering
+%     \begin{adjustbox}{max width=.95\linewidth}
+%       \begin{tikzpicture}[scale=.8]
+%         \draw[fill=blockgray] (0,0) rectangle (3,3);
+%         \node at (3.2,-0.5){feature 1};
+%         \node[box,minimum width=.9cm,minimum height=.7cm] at (.7,.8){outlier};
+%         \node[box,minimum width=.9cm,minimum height=.7cm] at (2.4,2.1){normal};
+%         \draw[dashed] (1.5,0)--(1.5,3) (-1,1.45)--(4,1.45);
+%       \end{tikzpicture}
+%     \end{adjustbox}
+% \end{columns}
+% \end{frame}
 
-\column{0.47\linewidth}
-\centering
-\begin{adjustbox}{max width=\linewidth}
-\begin{tikzpicture}[node distance=1cm]
-  \node[box,text width=1.9cm] (v){vector};
-  \node[box,right=1.9cm of v,text width=1.9cm] (t1){tree 1};
-  \node[box,below=of t1,text width=1.9cm] (t2){tree 2};
-  \node[box,below=of t2,text width=1.9cm] (t3){tree $\,\dots$};
-  \node[box,right=1.9cm of t2,text width=2.3cm] (vote){majority label};
-  \draw[arr](v)--(t1);
-  \draw[arr](v)--(t2);
-  \draw[arr](v)--(t3);
-  \draw[arr](t1)--(vote);
-  \draw[arr](t2)--(vote);
-  \draw[arr](t3)--(vote);
+\subsection{Algorithms}
+\begin{frame}{Isolation Forest \ding{173} - intuition}
+\begin{columns}
+  \column{.55\linewidth}
+  \begin{itemize}[<+->]
+    \item Random binary partitioning isolates unusual lines in fewer splits.
+    \item Score \(s(x)=2^{-h(x)/c(n)}\) $\in$ [0,1] \\ if high $\rightarrow$ outlier.
+    \item CPU-only: \( \approx 30\,\mu s\) per line.
+  \end{itemize}
+  \column{.45\linewidth}
+    \centering
+    \begin{tikzpicture}[%
+  level distance = 1.3cm,
+  level 1/.style={sibling distance=1.4cm},
+  level 2/.style={sibling distance=0.8cm},
+  every node/.style={circle, draw, minimum size=6mm, inner sep=0pt},
+  normal/.style  ={fill=gray!10},
+  potout/.style   ={fill=blue!60},
+  outlier/.style  ={fill=red!70},
+  empty/.style    ={fill=white}
+]
+
+% --- Baum --------------------------------------------------------
+\node[empty] {}                                 % root
+  child {node[empty] {}                         % linke Teilwurzel
+    child {node[potout] {}}                     % potenzieller Outlier
+    child {node[empty] {}
+      child {node[empty] {}}
+      child {node[potout] {}}
+    }
+  }
+  child {node[outlier] {}};                     % echter Outlier rechts
+
+% --- Legende -----------------------------------------------------
+\begin{scope}[xshift=2.cm, yshift=-0.1cm, every node/.style={anchor=west}]
+  \node[normal]  (n1) at (0,0)   {}; \node at (0.6,0)   {normal};
+  \node[potout]  (n2) at (0,-0.6){}; \node at (0.6,-0.6){potential outlier};
+  \node[outlier] (n3) at (0,-1.2){}; \node at (0.6,-1.2){outlier};
+\end{scope}
 \end{tikzpicture}
-\end{adjustbox}
+
 \end{columns}
 \end{frame}
 
-% --------------------------------------------------------------- %
+% \begin{frame}{Random Forest \ding{174} - error labelling}
+% \begin{columns}
+%   \column{.55\linewidth}
+%   \begin{itemize}[<+->]
+%     \item Converts \IForest-flagged lines into 7 domain labels.
+%     \item Majority vote \Rightarrow deterministic, auditable output.
+%     \item Nightly retrain < 90 s; warm-start supports drift handling.
+%   \end{itemize}
+%   \column{.45\linewidth}
+%     \centering
+%     \begin{adjustbox}{max width=.9\linewidth}
+%       \begin{tikzpicture}[node distance=1cm]
+%         \node[box,text width=1.8cm]{vector};
+%         \node[box,right=1.8cm of {$(current bounding box.east)!0.5!(current bounding box.east)$},text width=1.8cm] (t1){tree 1};
+%         \node[box,below=of t1,text width=1.8cm] (t2){tree 2};
+%         \node[box,below=of t2,text width=1.8cm] (t3){tree ...};
+%         \node[box,right=1.8cm of t2,text width=2.1cm] (vote){label};
+%         \draw[arr] (0,0) -- (t1.west);
+%         \draw[arr] (0,0) -- (t2.west);
+%         \draw[arr] (0,0) -- (t3.west);
+%         \draw[arr] (t1) -- (vote);
+%         \draw[arr] (t2) -- (vote);
+%         \draw[arr] (t3) -- (vote);
+%       \end{tikzpicture}
+%     \end{adjustbox}
+% \end{columns}
+% \end{frame}
+
+\begin{frame}{Random Forest \ding{174} - error labelling}
+\begin{columns}
+  \column{.55\linewidth}
+  \begin{itemize}[<+->]
+    \item Converts \IForest-flags into 7 domain labels.
+    \item Majority vote = deterministic, auditable output.
+    \item Nightly retrain < 90 s; warm-start handles drift.
+  \end{itemize}
+  \column{.45\linewidth}
+    \centering
+    \begin{adjustbox}{max width=.85\linewidth}
+      \begin{tikzpicture}[node distance=1cm]
+        \node[box,text width=1.7cm] (v){vector};
+        \node[box,right=1.7cm of v,text width=1.6cm] (t1){tree 1};
+        \node[box,below=of t1,text width=1.6cm] (t2){tree 2};
+        \node[box,below=of t2,text width=1.6cm] (t3){tree x};
+        \node[box,right=1.7cm of t2,text width=2cm] (vote){label};
+        \draw[arr](v)--(t1);
+        \draw[arr](v)--(t2);
+        \draw[arr](v)--(t3);
+        \draw[arr](t1)--(vote);
+        \draw[arr](t2)--(vote);
+        \draw[arr](t3)--(vote);
+      \end{tikzpicture}
+    \end{adjustbox}
+\end{columns}
+\end{frame}
+
+% ================================================================
+
 \section{Architecture}
+% ================================================================
+
 \begin{frame}{End-to-end pipeline (< 40 ms inline)}
 \centering
-% \begin{adjustbox}{max width=.9\linewidth, max height=.7\textheight}
-\begin{adjustbox}{max width=1.3\linewidth, max height=.9\textheight}
-\begin{tikzpicture}[node distance=1.2cm and 1.8cm]
-  \node[box] (raw){Raw log stream};
-  \node[box,below=of raw] (norm){Normalise text};
-  \node[box,below=of norm] (vect){Tokenise \& TF-IDF};
-  \node[box,below=of vect] (ifor){\IForest};
-  \node[box,below=of ifor,xshift=+2.6cm] (rfor){\RForest};
-  \node[box,below=of rfor] (json){JSON verdict};
-  \node[box,below=of ifor,xshift=-4.8cm] (pass){Pass-through};
-
-  \draw[arr](raw)--(norm)--(vect)--(ifor);
-  \draw[arr](ifor)--node[lab]{score$<\tau$}(pass);
-  \draw[arr](ifor)--node[lab]{score$\ge\tau$}(rfor)--(json);
-
-  \node[side,right=3.7cm of vect] (cron){Nightly GitLab job};
-  \node[side,below=of cron] (train){Retrain IF\\RF};
-  \draw[arr,dashed](cron)--(train);
-  \draw[arr,dashed](train.west)+(-.2,.15)|-(ifor.east);
-  \draw[arr,dashed](train.west)+(-.2,-.15)|-(rfor.east);
-
-  \node[draw,rounded corners=4pt,inner xsep=12pt,inner ysep=9pt,
-        fit=(raw)(json),label=above:{\footnotesize\bfseries Inline path (< 40 ms)}]{};
-  \node[draw,rounded corners=4pt,inner sep=4pt,fit=(cron)(train),
-        label=above:{\footnotesize\bfseries Nightly adaptation}]{};
-\end{tikzpicture}
+\begin{adjustbox}{max width=.98\linewidth,max height=.9\textheight}
+  % (diagram identical, but box colour updated via style)
+  \begin{tikzpicture}[node distance=1.2cm and 1.8cm]
+    \node[box] (raw){Raw log stream};
+    \node[box,below=of raw] (norm){Normalise};
+    \node[box,below=of norm] (vect){Tokenise \& TF-IDF};
+    \node[box,below=of vect] (ifor){\IForest};
+    \node[box,below=of ifor,xshift=+2.6cm] (rfor){\RForest};
+    \node[box,below=of rfor] (json){JSON verdict};
+    \node[box,below=of ifor,xshift=-5.3cm] (pass){pass-through};
+    \draw[arr] (raw)--(norm)--(vect)--(ifor);
+    \draw[arr] (ifor)--node[lab]{score$<\tau$}(pass);
+    \draw[arr] (ifor)--node[lab]{score$\ge\tau$}(rfor)--(json);
+    \node[side,right=3.7cm of vect] (cron){nightly GitLab job};
+    \node[side,below=of cron] (train){retrain IF \& RF};
+    \draw[arr,dashed] (cron)--(train);
+    \draw[arr,dashed] (train.west)+(-.2,.15)|-(ifor.east);
+    \draw[arr,dashed] (train.west)+(-.2,-.15)|-(rfor.east);
+    \node[draw,rounded corners=4pt,inner sep=9pt,fit=(raw)(json),label=above:{inline path (< 40 ms)}]{};
+    \node[draw,rounded corners=4pt,inner sep=4pt,fit=(cron)(train),label=above:{nightly adaptation}]{};
+  \end{tikzpicture}
 \end{adjustbox}
 \end{frame}
 
-\section{Data \& Experimental Design}
+% ================================================================
+\section{Data \& evaluation}
+% ================================================================
+
 \begin{frame}{Datasets \& metrics}
 \begin{columns}
-\column{0.55\linewidth}
-\begin{itemize}[<+->]
-  \item 117 k macOS system log lines
-  \item 655 k OpenSSH authentication lines
-  \item 504 ground-truth anomalies
-  \item Split 70 / 15 / 15 \% (train / validation / test)
-  \item Metrics: Macro-F\textsubscript{1},  
-        Area Under the Precision-Recall Curve (AUPRC),  
-        99.9 \% latency percentile
-\end{itemize}
+  \column{.55\linewidth}
+  \begin{itemize}[<+->]
+     \item 117 k \textit{macOS} logs + 655 k \textit{OpenSSH} logs
+     \item 504 labelled anomalies ($\approx$1 : 200 skew)
+     \item Split 70 / 15 / 15 \% (train / val / test)
+     \item Metrics: Macro-F\textsubscript{1}, AUPRC, p99.9 latency
+  \end{itemize}
+  \column{.45\linewidth}
+    \centering
+    % simple mini diagram only, no scaling
+    % \begin{tikzpicture}[node distance=.9cm]
+    %   \node[box,text width=2.5cm]{raw logs};
+    %   \node[box,below=of {$(current bounding box.east)!0.5!(current bounding box.east)$}] (norm){normalise};
+    %   \node[box,below=of norm,text width=2cm] (vec){TF-IDF};
+    %   \draw[arr] (0,-0.52) -- (norm.west);
+    %   \draw[arr] (norm) -- (vec);
+    % \end{tikzpicture}
 
-\column{0.45\linewidth}
-\centering
-\begin{adjustbox}{max width=\linewidth}
-\begin{tikzpicture}[node distance=0.9cm]
-\node[box,text width=3cm] (raw){raw logs};
-\node[box,below=of raw] (norm){normalise};
-\node[box,below=of norm] (vec){TF-IDF};
-\draw[arr](raw)--(norm)--(vec);
-% \node at ($(vec)!0.5!(raw)+(3.6,0)$) {\footnotesize 50 k-dim.\ sparse};
-\end{tikzpicture}
-\end{adjustbox}
+    \begin{tikzpicture}[node distance=1cm,
+      box/.style={
+        draw, rounded corners=3pt, fill=gray!20, 
+        minimum width=3cm, minimum height=1cm, align=center},
+      arr/.style={->, thick, shorten >=2pt}
+    ]
+    \node[box] (raw)  {raw logs};
+    \node[box, below=of raw]  (norm) {normalise};
+    \node[box, below=of norm] (vec) {TF–IDF};
+    % gerade Pfeile von Mitte zu Mitte
+    \draw[arr] (raw.south) -- (norm.north);
+    \draw[arr] (norm.south) -- (vec.north);
+  \end{tikzpicture}
 \end{columns}
 \end{frame}
 
-% --------------------------------------------------------------- %
+% ================================================================
 \section{Results}
+% ================================================================
+
+% \begin{frame}{Headline numbers}
+% \centering
+% \begin{tabular}{lccc}
+%   \toprule
+%    \& Precision \& Recall \& F\textsubscript{1} \\
+%   \midrule
+%   Detection (\IForest) \& 0.91 \& 0.88 \& 0.89 \\
+%   Classification (\RForest) \& 0.99 \& 0.99 \& 0.99 \\
+%   \bottomrule
+% \end{tabular}
+
+% \begin{frame}{Headline numbers}
+% \centering
+% \begin{tabular}{lccc}
+%   \toprule
+%    & Precision & Recall & F\textsubscript{1} \\
+%   \midrule
+%   Detection (\IForest) & 0.91 & 0.88 & 0.89 \\
+%   Classification (\RForest) & 0.99 & 0.99 & 0.99 \\
+%   \bottomrule
+% \end{tabular}
+
 \begin{frame}{Headline numbers}
-\begin{columns}
-\column{0.55\linewidth}
-\small
-\begin{itemize}[<+->]
-  \item Detection (\IForest): \textbf{F\textsubscript{1} = 0.89}  \newline
-        AUPRC = 0.94
-  \item Diagnosis (\RForest): Macro-F\textsubscript{1} = \textbf{0.99}, \newline
-        Matthews Correlation Coefficient = 0.98
-  \item Latency: 37 ms (p99.9); throughput 45 k lines /s
-\end{itemize}
-
-\column{0.45\linewidth}
 \centering
-\begin{adjustbox}{max width=\linewidth}
-\begin{tikzpicture}
-\begin{axis}[width=6cm,height=5.2cm,
-             xlabel=Recall,ylabel=Precision,
-             xmin=0,xmax=1,ymin=0,ymax=1,
-             grid=major,legend style={font=\scriptsize,
-             at={(0.5,-0.18)},anchor=north,legend columns=-1}]
-  \addplot[smooth,thick] coordinates
-    {(0,1) (0.1,0.95) (0.3,0.92) (0.6,0.90) (0.8,0.88) (1,0.86)};
-  \addlegendentry{ALV}
-  \addplot[smooth,thick,dashed] coordinates
-    {(0,0.2) (0.1,0.12) (0.3,0.08) (0.6,0.05) (1,0.04)};
-  \addlegendentry{Regex}
-\end{axis}
-\end{tikzpicture}
-\end{adjustbox}
-\end{columns}
+\begin{tabular}{lccc}
+  \toprule
+   & Precision & Recall & F\textsubscript{1} \\
+  \midrule
+  Detection (\IForest) & 0.91 & 0.88 & 0.89 \\
+  Classification (\RForest) & 0.99 & 0.99 & 0.99 \\
+  \bottomrule
+\end{tabular}
+
+\vspace{.8em}
+\small
+Throughput: 45 000 lines/s \;|\; p99.9 latency: 37 ms
 \end{frame}
 
+% ================================================================
 \section{Impact}
-\begin{frame}{Organisation-level benefits}
+% ================================================================
+
+\begin{frame}{Operational impact}
 \begin{itemize}[<+->]
-  \item \alert{Minutes → Milliseconds}: failures surface during the same pipeline run.
-  \item \textbf{Zero token fees}: 2300 \LOC{} + FastAPI; vendor neutral.
-  \item Data never leaves the VPN - compliant with GDPR \& NDAs.
-  \item Deterministic labels enable auditable root-cause trails.
+  \item \textbf{Latency}: minutes $\rightarrow$ \textbf{milliseconds} (inline verdict).
+  \item \textbf{Cost-free}: 2.3 k \LOC{}, CPU-only, no token fees.
+  \item \textbf{GDPR compliant}: logs never leave the VPN.
 \end{itemize}
 \end{frame}
 
-\section{Limitations \& Roadmap}
-\begin{frame}{Limitations \& next steps}
-\begin{itemize}[<+->]
-  \item Only seven error classes - grow ontology as label volume rises.
-  \item First Drain template pass is manual (cold-start issue).
-  \item Explainability: token-level \emph{SHapley Additive ExPlanations}  
-        and \emph{Integrated Gradients} still on the to-do list.
-  \item Roadmap: threshold-free Bayesian change-point detection,  
-        distilled LogBERT encoder, federated nightly retrain.
-\end{itemize}
-\end{frame}
-
+% ================================================================
 \section{Wrap-up}
-\begin{frame}{Take-away}
-\vspace{1em}
-\begin{center}
-\Large
-\textbf{Light-weight, on-prem ML matches AIOps SaaS}\\[0.4em]
-without latency, cost or data-protection pain.
-\end{center}
+% ================================================================
 
-\vspace{1.2em}
-\begin{center}
+\begin{frame}{Take-away}
+\vspace{2em}
+\centering
+{\Large
+  \textbf{Light-weight on-prem ML matches AIOps SaaS}\par
+  \vspace{.4em}
+  without latency, cost or privacy pain.
+}
+
+\vspace{2.2em}
 \small
 Questions welcome - thank you!
-\end{center}
 \end{frame}
 
 \end{document}
