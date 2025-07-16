@@ -1,33 +1,30 @@
 % !TEX TS-program = pdflatex
-\documentclass[14pt,aspectratio=169,draft]{beamer}
+\documentclass[14pt,aspectratio=169]{beamer}  % <-- draft entfernt
 \usetheme{metropolis}
 \metroset{progressbar=frametitle}
 \usepackage{pifont}
 
 % -------------------------------------------------------------- %
-% ENCODING                                                         %
+% ENCODING                                                      %
 % -------------------------------------------------------------- %
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
 
 % -------------------------------------------------------------- %
-% TikZ & helper libraries (ohne shadows.blur)                     %
+% TikZ \& helper libraries (ohne shadows.blur)                    %
 % -------------------------------------------------------------- %
 \usepackage{tikz,adjustbox}
 \usetikzlibrary{positioning,arrows.meta,fit}
 
 % -------------------------------------------------------------- %
-% PGFPlots                                                           %
+% PGFPlots                                                      %
 % -------------------------------------------------------------- %
 \usepackage{pgfplots}
-\pgfplotsset{
-  compat=newest,
-  plot coordinates/math parser=false % schneller, wenn du fixe Koordinaten hast
-}
+\pgfplotsset{compat=newest,plot coordinates/math parser=false}
 
 % -------------------------------------------------------------- %
-% MATH & ABBREVIATIONS                                               %
+% MATH \& ABBREVIATIONS                                           %
 % -------------------------------------------------------------- %
 \usepackage{amsmath,physics,xspace}
 
@@ -38,11 +35,11 @@
 \newcommand{\LOC}{Lines of Code\xspace}
 
 % -------------------------------------------------------------- %
-% TikZ‑Stile                                                         %
+% TikZ-Stile                                                     %
 % -------------------------------------------------------------- %
 \tikzset{
   box/.style = {rectangle, draw, rounded corners=3pt,
-                text width = 4.5cm, align = center,
+                text width = 4.6cm, align = center,
                 minimum height = 1.05cm,
                 font = \small, fill = gray!6},
   side/.style = {box, text width = 3.8cm, fill = blue!7},
@@ -51,9 +48,9 @@
 }
 
 % -------------------------------------------------------------- %
-% Titelinformationen                                                 %
+% Titelinformationen                                             %
 % -------------------------------------------------------------- %
-\title{Use of AI for log analysis in CI/CD pipelines}
+\title{Use of AI for Log Analysis in CI/CD Pipelines}
 \subtitle{Bachelor Thesis - Defence}
 \author{Maid Ališi\'c}
 \institute{University of Applied Sciences Upper Austria, Campus Hagenberg}
@@ -84,6 +81,7 @@
 \end{enumerate}
 \end{frame}
 
+% --------------------------------------------------------------- %
 \section{Research Questions}
 \begin{frame}{Research questions (thesis)}
 \begin{description}[<+->]
@@ -94,26 +92,36 @@
 \end{description}
 \end{frame}
 
+% --------------------------------------------------------------- %
 \section{Method - Feature Engineering}
-\begin{frame}{Vectorisation step \ding{172} – TF-IDF}
+
+\begin{frame}{Vectorisation step \ding{172} - TF-IDF}
 \small
 \begin{enumerate}[<+->]
   \item \textbf{Normalisation:} remove timestamps, colours, IDs; lowercase.
   \item \textbf{Tokenise} + generate 1-2-grams.
-  \item Compute weights  
-        \[
-          w_{t,d}= \mathrm{tf}_{t,d}\cdot
-          \log\frac{N}{\mathrm{df}_t}\quad\text{(\TFIDF{})}
-        \]
+  \item Compute weights:
+        \begin{equation*}
+            w_{t,d}= \mathrm{tf}_{t,d}\cdot
+            \log\frac{N}{\mathrm{df}_t}
+            \hspace*{2cm}
+            \begin{minipage}[t]{0.48\linewidth}
+                \footnotesize\raggedright
+                $w_{t,d}$ - weight of term $t$ in document $d$\\
+                $\mathrm{tf}_{t,d}$ - raw term frequency in $d$\\
+                $N$ - total number of documents (log lines)\\
+                $\mathrm{df}_t$ - number of documents that contain $t$
+            \end{minipage}
+            \end{equation*}
   \item Result: 50 k-dimensional sparse matrix;  
-        \(\approx 100\,000\) lines /s on a single core.
+        $\approx$ 100 000 lines /s on a single core.
 \end{enumerate}
 
-\vspace{0.5em}
+\vspace{0.4em}
 \centering
 \begin{tikzpicture}[node distance=1.1cm]
-  \node[box,text width=2.8cm] (txt){log line};
-  \node[box,right=2.6cm of txt,text width=2.8cm] (vec){sparse vector};
+  \node[box,text width=2.9cm] (txt){log line};
+  \node[box,right=2.6cm of txt,text width=2.9cm] (vec){sparse vector};
   \draw[arr](txt)--(vec);
 \end{tikzpicture}
 \end{frame}
@@ -125,37 +133,37 @@
 \column{0.55\linewidth}
 \begin{itemize}[<+->]
   \item Randomly split feature space into binary trees.
-  \item Rare / weird points are isolated \emph{early}.  
-        Path length \(h(x)\) $\rightarrow$ anomaly score  
+  \item Rare / unusual points are isolated \emph{early}.  
+        Path length \(h(x)\) $\rightarrow{}$ anomaly score  
         \(s(x)=2^{-h(x)/c(n)}\).
-  \item CPU-friendly: \(30 \mu\text{s}\) per line, no GPU.
+  \item CPU-friendly: 30 µs per line, no GPU.
 \end{itemize}
 
 \column{0.45\linewidth}
 \centering
 \begin{adjustbox}{max width=\linewidth}
-\begin{tikzpicture}[scale=.9]
+\begin{tikzpicture}[scale=.9,every node/.style={font=\scriptsize}]
   \draw[fill=gray!15] (0,0) rectangle (3,3);
-  \node at (1.5,3.25) {\scriptsize feature 1};
+  \node at (1.5,3.2){feature 1};
   \node[box,minimum width=1cm,minimum height=.8cm] (p1) at (0.6,.7){outlier};
   \node[box,minimum width=1cm,minimum height=.8cm] (p2) at (2.4,2.3){normal};
   \draw[dashed] (1.2,0)--(1.2,3) (0,1.8)--(3,1.8);
-  \node at (4,1.5){\scriptsize few splits $\rightarrow$ high score};
+  \node[anchor=west] at (3.2,1.4){few splits $\rightarrow$ high score};
 \end{tikzpicture}
 \end{adjustbox}
 \end{columns}
 \end{frame}
 
+% --------------------------------------------------------------- %
 \section{Method - Algorithm \ding{174}}
 \begin{frame}{Why add a Random-Forest classifier?}
 \begin{columns}
 \column{0.53\linewidth}
 \begin{enumerate}[<+->]
-  \item \IForest flags \emph{that} something is odd.  
-        Operators still ask \emph{why}.
-  \item \RForest ensemble votes one of seven error categories.
-  \item Feature importance (n-grams) enables future token-level highlights.
-  \item Trains nightly in < 90 s (400 trees, depth 30).
+  \item \IForest says \emph{“something odd”}. Operators still ask \emph{“why?”}
+  \item \RForest majority vote assigns one of seven error categories.
+  \item Per-token feature importance allows future visual highlights.
+  \item Nightly training < 90 s (400 trees, depth 30).
 \end{enumerate}
 
 \column{0.47\linewidth}
@@ -178,14 +186,16 @@
 \end{columns}
 \end{frame}
 
+% --------------------------------------------------------------- %
 \section{Architecture}
 \begin{frame}{End-to-end pipeline (< 40 ms inline)}
 \centering
-\begin{adjustbox}{max width=.9\linewidth, max height=.7\textheight}
+% \begin{adjustbox}{max width=.9\linewidth, max height=.7\textheight}
+\begin{adjustbox}{max width=1.3\linewidth, max height=.9\textheight}
 \begin{tikzpicture}[node distance=1.2cm and 1.8cm]
   \node[box] (raw){Raw log stream};
   \node[box,below=of raw] (norm){Normalise text};
-  \node[box,below=of norm] (vect){Tokenise\\\TFIDF};
+  \node[box,below=of norm] (vect){Tokenise \& TF-IDF};
   \node[box,below=of vect] (ifor){\IForest};
   \node[box,below=of ifor,xshift=+2.6cm] (rfor){\RForest};
   \node[box,below=of rfor] (json){JSON verdict};
@@ -218,7 +228,9 @@
   \item 655 k OpenSSH authentication lines
   \item 504 ground-truth anomalies
   \item Split 70 / 15 / 15 \% (train / validation / test)
-  \item Metrics: Macro-F\textsubscript{1}, Area under PR curve, 99.9 \% latency
+  \item Metrics: Macro-F\textsubscript{1},  
+        Area Under the Precision-Recall Curve (AUPRC),  
+        99.9 \% latency percentile
 \end{itemize}
 
 \column{0.45\linewidth}
@@ -235,15 +247,18 @@
 \end{columns}
 \end{frame}
 
+% --------------------------------------------------------------- %
 \section{Results}
 \begin{frame}{Headline numbers}
 \begin{columns}
 \column{0.55\linewidth}
 \small
 \begin{itemize}[<+->]
-  \item Detection (\IForest): \textbf{F\textsubscript{1} = 0.89}  (AUC-PR 0.94)
-  \item Diagnosis (\RForest): Macro-F\textsubscript{1} = \textbf{0.99}, MCC 0.98
-  \item Latency: 37 ms (p99.9); throughput 45 k lines/s
+  \item Detection (\IForest): \textbf{F\textsubscript{1} = 0.89}  \newline
+        AUPRC = 0.94
+  \item Diagnosis (\RForest): Macro-F\textsubscript{1} = \textbf{0.99}, \newline
+        Matthews Correlation Coefficient = 0.98
+  \item Latency: 37 ms (p99.9); throughput 45 k lines /s
 \end{itemize}
 
 \column{0.45\linewidth}
@@ -282,8 +297,10 @@
 \begin{itemize}[<+->]
   \item Only seven error classes - grow ontology as label volume rises.
   \item First Drain template pass is manual (cold-start issue).
-  \item Explainability: token-level SHAP / IG still to-do.
-  \item Roadmap: threshold-free Bayesian change-point, distilled LogBERT, federated retrain, SHAP highlights.
+  \item Explainability: token-level \emph{SHapley Additive ExPlanations}  
+        and \emph{Integrated Gradients} still on the to-do list.
+  \item Roadmap: threshold-free Bayesian change-point detection,  
+        distilled LogBERT encoder, federated nightly retrain.
 \end{itemize}
 \end{frame}
 
