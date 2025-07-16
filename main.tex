@@ -82,8 +82,8 @@
 \begin{itemize}[<+->]
   \item CI/CD emits \alert{$\approx$ 10-20 GB} of build, test \& deploy logs \textit{per day}. 
   \item Manual \texttt{grep} slows the merge queue; critical faults slip through.
-  \item Business \textbf{SLO}: feedback within \alert{\(\le\) 200 ms} per pipeline.
-  \item Logs can leak customer IDs $\rightarrow$ \textbf{no SaaS export}.
+  \item Business \textbf{Service-Level Objective}: feedback within \alert{\(\le\) 200 ms} per pipeline.
+  \item Logs may expose customer IDs, therefore they must remain on-premises (no cloud export).
 \end{itemize}
 \end{frame}
 
@@ -146,9 +146,9 @@
   \column{.55\linewidth}
     \begin{enumerate}[<+->]
       \item \textbf{Normalise} - strip timestamps, colours, IDs.
-      \item \textbf{Tokenise} - 1-2-grams.
+      \item \textbf{Tokenise} into uni- and bi-grams.
       \item Weight with \tfidf.
-      \item Produce \(50\,000\)-dim sparse vector; \(>10^{5}\) lines / s on one core.
+      \item Produce \(50\,000\)-dimensional sparse vector; \(>10^{5}\) lines / s on one core.
     \end{enumerate}
   \column{.45\linewidth}
     \centering
@@ -259,7 +259,7 @@
 \begin{columns}
   \column{.55\linewidth}
   \begin{itemize}[<+->]
-    \item Converts \IForest-flags into 7 domain labels.
+    \item Maps each flagged line to a domain-specific error category.
     \item Majority vote = deterministic, auditable output.
     \item Nightly retrain < 90 s; warm-start handles drift.
   \end{itemize}
@@ -323,9 +323,9 @@
   \column{.55\linewidth}
   \begin{itemize}[<+->]
      \item 117 k \textit{macOS} logs + 655 k \textit{OpenSSH} logs
-     \item 504 labelled anomalies ($\approx$1 : 200 skew)
+     \item 504 labelled anomalies (class imbalance $\approx$ 1 : 200)
      \item Split 70 / 15 / 15 \% (train / val / test)
-     \item Metrics: Macro-F\textsubscript{1}, AUPRC, p99.9 latency
+     \item Metrics: Macro-F\textsubscript{1}, AUPRC, 99.9th-percentile latency
   \end{itemize}
   \column{.45\linewidth}
     \centering
@@ -346,7 +346,7 @@
     ]
     \node[box] (raw)  {raw logs};
     \node[box, below=of raw]  (norm) {normalise};
-    \node[box, below=of norm] (vec) {TF–IDF};
+    \node[box, below=of norm] (vec) {TF-IDF};
     % gerade Pfeile von Mitte zu Mitte
     \draw[arr] (raw.south) -- (norm.north);
     \draw[arr] (norm.south) -- (vec.north);
@@ -393,7 +393,7 @@
 
 \vspace{.8em}
 \small
-Throughput: 45 000 lines/s \;|\; p99.9 latency: 37 ms
+Throughput: 45 000 lines/s \;|\; 99.9th‑percentile latency: 37 ms
 \end{frame}
 
 % ================================================================
