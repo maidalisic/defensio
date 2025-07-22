@@ -1,33 +1,35 @@
 % !TEX TS-program = pdflatex
 \documentclass[15pt,aspectratio=169]{beamer}
+
 % ------------------------------------------------------------------
-% Theme \& visual tweaks
+% Theme & visual tweaks
 % ------------------------------------------------------------------
 \usetheme{metropolis}
 \metroset{progressbar=frametitle}
-% Slightly darker boxes for better contrast
+\setbeamertemplate{frame numbering}[fraction] % 1/12 unten rechts
 \definecolor{blockgray}{RGB}{225,225,225}  % ~20 % gray
+
 % --------------------------------------------------------------
-% Encoding \& fonts
+% Encoding & fonts
 % --------------------------------------------------------------
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
+\usepackage{microtype}      % nicer text
 \usepackage{pifont}
 \usepackage{booktabs}
-
-\usepackage{fontawesome5}  % for simple professional icons
+\usepackage{fontawesome5}   % icons, falls noch genutzt
 
 % --------------------------------------------------------------
-% TikZ \& PGFPlots
+% TikZ & PGFPlots
 % --------------------------------------------------------------
 \usepackage{tikz,adjustbox}
-\usetikzlibrary{positioning,arrows.meta,fit, calc,trees}
+\usetikzlibrary{positioning,arrows.meta,fit,calc,trees}
 \usepackage{pgfplots}
 \pgfplotsset{compat=newest,plot coordinates/math parser=false}
 
 % --------------------------------------------------------------
-% Maths \& abbreviations
+% Maths & abbreviations
 % --------------------------------------------------------------
 \usepackage{amsmath,physics,xspace}
 \newcommand{\tfidf}{TF-IDF\xspace}
@@ -37,7 +39,7 @@
 \newcommand{\LOC}{lines of code\xspace}
 
 % --------------------------------------------------------------
-% TikZ box styles (updated grey)
+% TikZ box styles
 % --------------------------------------------------------------
 \tikzset{
   box/.style = {rectangle, draw, rounded corners=3pt,
@@ -53,9 +55,8 @@
 % Meta data
 % --------------------------------------------------------------
 \title{Use of AI for Log Analysis in CI/CD Pipelines}
-\subtitle{Bachelor Thesis - Defence}
+\subtitle{Bachelor Thesis -- Defence}
 \author{Maid Ališi\'c}
-% \institute{FH Oberösterreich · Campus Hagenberg}
 \institute{%
   FH Oberösterreich · Campus Hagenberg\\[1ex]
   Supervisor: FH‑Prof.\ Dipl.‑Ing.\ Dr.\ Stefan Wagner
@@ -78,43 +79,33 @@
   \tableofcontents[hideallsubsections]
 \end{frame}
 
+% ================================================================
 \section{Research questions}
 % ================================================================
-
-% --- visual RQ tree ------------------------------------------------
 
 \begin{frame}{Research questions}
   \centering
   \begin{tikzpicture}[
-      grow=down,                             % Baum wächst nach unten
-      level distance=2.8cm,                  % vertikaler Abstand der Ebenen
-      level 1/.style={sibling distance=4.8cm},% horizontaler Abstand der 3 Kinder
+      grow=down,
+      level distance=2.8cm,
+      level 1/.style={sibling distance=4.8cm},
       box/.style = {rectangle, draw, rounded corners=3pt,
                     text width = 4.6cm, align = center,
                     minimum height = 1.05cm,
-                    font = \small, fill = blockgray},
-      arr/.style = {-{Stealth[length=3mm,width=2mm]}, thick}
+                    font = \small, fill = blockgray}
     ]
     \node[box,text width=5cm] (main)
       {\textbf{RQ\textsubscript{main}}:\\[2pt]
        How can AI improve accuracy \& explainability\\
        of CI/CD log analysis?}
-      child {
-        node[box,text width=4.3cm]
-          {\textbf{RQ1}: Capability of a cloud LLM (ChatGPT)\\to interpret logs}
-      }
-      child {
-        node[box,text width=4.3cm]
-          {\textbf{RQ2}: How does a local IF+RF stack compare?}
-      }
-      child {
-        node[box,text width=4.3cm]
-          {\textbf{RQ3}: Integration hurdles inside existing pipelines}
-      }
-    ;
+      child { node[box,text width=4.3cm]
+        {\textbf{RQ1}: Capability of a cloud LLM (ChatGPT) to interpret logs} }
+      child { node[box,text width=4.3cm]
+        {\textbf{RQ2}: How does a local IF+RF stack compare?} }
+      child { node[box,text width=4.3cm]
+        {\textbf{RQ3}: Integration hurdles inside existing pipelines} };
   \end{tikzpicture}
 \end{frame}
-
 
 % ================================================================
 \section{Problem context}
@@ -122,24 +113,21 @@
 
 \begin{frame}{Why do we care?}
 \begin{itemize}[<+->]
-  \item CI/CD emits \alert{$\approx$ 10-20 GB} of build, test \& deploy logs \textit{per day}. 
+  \item CI/CD emits \alert{$\approx$ 10--20 GB} of build, test \& deploy logs \textit{per day}.
   \item Manual \texttt{grep} slows the merge queue; critical faults slip through.
-  \item Business \textbf{Service-Level Objective}: feedback within \alert{\(\le\) 200 ms} per pipeline.
+  \item Business \textbf{Service-Level Objective}: feedback within \alert{$\le 200$ ms} per pipeline.
   \item Logs may expose customer IDs, therefore they must remain on-premises (no cloud export).
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Operational pain points}
 \begin{enumerate}[<+->]
-  \item \textbf{Context-sensitivity} - identical tokens can be harmless or fatal.
-  \item \textbf{Concept drift} - each merge may rename tests or switches.
-  \item \textbf{Latency pressure} - analysis must finish before runner teardown.
-  \item \textbf{Alert fatigue} - regex rule sets grow without bound.
+  \item \textbf{Context-sensitivity} -- identical tokens can be harmless or fatal.
+  \item \textbf{Concept drift} -- each merge may rename tests or switches.
+  \item \textbf{Latency pressure} -- analysis must finish before the job completes.
+  \item \textbf{Alert fatigue} -- regex rule sets grow without bound.
 \end{enumerate}
 \end{frame}
-
-% ================================================================
-
 
 % ================================================================
 \section{Method}
@@ -150,7 +138,7 @@
 \begin{columns}
   \column{.55\linewidth}
     \begin{enumerate}[<+->]
-      \item \textbf{Normalise} - strip timestamps, colours, IDs.
+      \item \textbf{Normalise} -- strip timestamps, colours, IDs.
       \item \textbf{Tokenise} into uni- and bi-grams.
       \item Weight with \tfidf.
       \item Produce sparse vector.
@@ -165,19 +153,18 @@
 \end{columns}
 \end{frame}
 
-
 \subsection{Algorithms}
-\begin{frame}{Isolation Forest \ding{173} - intuition}
+\begin{frame}{Isolation Forest \ding{173} -- intuition}
 \begin{columns}
   \column{.55\linewidth}
   \begin{itemize}[<+->]
     \item Random binary partitioning isolates unusual lines in fewer splits.
-    \item Score \(s(x)=2^{-h(x)/c(n)}\) $\in$ [0,1] \\ if high $\rightarrow$ outlier.
-    \item CPU-only: \( \approx 30\,\mu s\) per line.
+    \item Score \(s(x)=2^{-h(x)/c(n)} \in [0,1]\); high $\Rightarrow$ outlier.
+    \item CPU-only: \(\approx 30\,\mu s\) per line.
   \end{itemize}
   \column{.45\linewidth}
     \centering
-\begin{tikzpicture}[%
+\begin{tikzpicture}[
   level distance = 1.3cm,
   level 1/.style={sibling distance=1.4cm},
   level 2/.style={sibling distance=0.8cm},
@@ -187,44 +174,36 @@
   outlier/.style ={fill=red!70},
   empty/.style   ={fill=white}
 ]
-
-  % --- Baum --------------------------------------------------------
-  \node[empty] {}                                 % root
-    child {node[empty] {}                         % linke Teilwurzel
-      child {node[potout] {}}                     % potenzieller Outlier
+  \node[empty] {}
+    child {node[empty] {}
+      child {node[potout] {}}
       child {node[empty] {}
         child {node[empty] {}}
         child {node[potout] {}}
       }
     }
-    child {node[outlier] {}};                     % echter Outlier rechts
+    child {node[outlier] {}};
 
-  % --- Legende -----------------------------------------------------
+  % Legend
   \begin{scope}[xshift=2.2cm, yshift=-0.1cm]
-    % Kreise für Legende
     \node[circle,draw,minimum size=6mm,inner sep=0pt,normal]  at (0,0)    {};
     \node[circle,draw,minimum size=6mm,inner sep=0pt,potout]  at (0,-0.7) {};
     \node[circle,draw,minimum size=6mm,inner sep=0pt,outlier] at (0,-1.4) {};
-
-    % Text‑Labels – hier den Kreisstil abschalten:
-    \node[anchor=west,shape=rectangle,draw=none] at (0.8,  0)   {normal};
-    \node[anchor=west,shape=rectangle,draw=none] at (0.8,-0.7) {potential outlier};
-    \node[anchor=west,shape=rectangle,draw=none] at (0.8,-1.4) {outlier};
+    \node[anchor=west,draw=none] at (0.8,  0)   {normal};
+    \node[anchor=west,draw=none] at (0.8,-0.7) {potential outlier};
+    \node[anchor=west,draw=none] at (0.8,-1.4) {outlier};
   \end{scope}
-
 \end{tikzpicture}
-
-
 \end{columns}
 \end{frame}
 
-\begin{frame}{Random Forest \ding{174} - error labelling}
+\begin{frame}{Random Forest \ding{174} -- error labelling}
 \begin{columns}
   \column{.55\linewidth}
   \begin{itemize}[<+->]
     \item Maps each flagged line to a domain-specific error category.
-    \item Majority vote = deterministic, auditable output.
-    \item Nightly retrain < 90 s; warm-start handles drift.
+    \item Majority vote $\Rightarrow$ deterministic, auditable output.
+    \item Nightly retrain $<$ 90 s; warm-start handles drift.
   \end{itemize}
   \column{.45\linewidth}
     \centering
@@ -247,14 +226,12 @@
 \end{frame}
 
 % ================================================================
-
 \section{Architecture}
 % ================================================================
 
-\begin{frame}{End-to-end pipeline (< 40 ms inline)}
+\begin{frame}{End-to-end pipeline ($< 40$ ms inline)}
 \centering
 \begin{adjustbox}{max width=.98\linewidth,max height=.9\textheight}
-  % (diagram identical, but box colour updated via style)
   \begin{tikzpicture}[node distance=1.2cm and 1.8cm]
     \node[box] (raw){Raw log stream};
     \node[box,below=of raw] (norm){Normalise};
@@ -292,17 +269,15 @@
   \end{itemize}
   \column{.45\linewidth}
     \centering
-
     \begin{tikzpicture}[node distance=1cm,
       box/.style={
-        draw, rounded corners=3pt, fill=gray!20, 
+        draw, rounded corners=3pt, fill=gray!20,
         minimum width=3cm, minimum height=1cm, align=center},
       arr/.style={->, thick, shorten >=2pt}
     ]
     \node[box] (raw)  {raw logs};
     \node[box, below=of raw]  (norm) {normalise};
     \node[box, below=of norm] (vec) {TF-IDF};
-    % gerade Pfeile von Mitte zu Mitte
     \draw[arr] (raw.south) -- (norm.north);
     \draw[arr] (norm.south) -- (vec.north);
   \end{tikzpicture}
@@ -313,23 +288,22 @@
 \section{Results}
 % ================================================================
 
-
 \begin{frame}{Headline numbers}
 \centering
 \begin{tabular}{lccc}
   \toprule
    & Precision & Recall & $F_{1}$ \\
   \midrule
-  Detection (\IForest) & 0.91 & 0.88 & 0.89 \\
-  Classification (\RForest) & 0.99 & 0.99 & 0.99 \\
-  \midrule
-  Regex Baseline & 0.286 & 0.286 & 0.286 \\
+  Detection (\IForest)        & 0.91 & 0.88 & 0.89 \\
+  Classification (\RForest)   & 0.99 & 0.99 & 0.99 \\
+  \addlinespace
+  Regex baseline              & 0.286 & 0.286 & 0.286 \\
   \bottomrule
 \end{tabular}
 
 \vspace{.8em}
 \small
-$F_{1} = 2 \cdot \frac{P \cdot R}{P + R}$
+$F_{1} = 2 \cdot \dfrac{P \cdot R}{P + R}$
 \end{frame}
 
 % ================================================================
@@ -359,7 +333,7 @@ $F_{1} = 2 \cdot \frac{P \cdot R}{P + R}$
 
 \vspace{2.2em}
 \small
-Questions welcome - thank you!
+Questions welcome -- thank you!
 \end{frame}
 
 \end{document}
