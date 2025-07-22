@@ -55,8 +55,12 @@
 \title{Use of AI for Log Analysis in CI/CD Pipelines}
 \subtitle{Bachelor Thesis - Defence}
 \author{Maid Ališi\'c}
-\institute{FH Oberösterreich · Campus Hagenberg}
-\date{23 July 2025}
+% \institute{FH Oberösterreich · Campus Hagenberg}
+\institute{%
+  FH Oberösterreich · Campus Hagenberg\\[1ex]
+  Supervisor: FH‑Prof.\ Dipl.‑Ing.\ Dr.\ Stefan Wagner
+}
+\date{July 23, 2025}
 
 % ==============================================================
 \begin{document}
@@ -74,29 +78,6 @@
   \tableofcontents[hideallsubsections]
 \end{frame}
 
-% ================================================================
-\section{Problem context}
-% ================================================================
-
-\begin{frame}{Why do we care?}
-\begin{itemize}[<+->]
-  \item CI/CD emits \alert{$\approx$ 10-20 GB} of build, test \& deploy logs \textit{per day}. 
-  \item Manual \texttt{grep} slows the merge queue; critical faults slip through.
-  \item Business \textbf{Service-Level Objective}: feedback within \alert{\(\le\) 200 ms} per pipeline.
-  \item Logs may expose customer IDs, therefore they must remain on-premises (no cloud export).
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Operational pain points}
-\begin{enumerate}[<+->]
-  \item \textbf{Context-sensitivity} - identical tokens can be harmless or fatal.
-  \item \textbf{Concept drift} - each merge may rename tests or switches.
-  \item \textbf{Latency pressure} - analysis must finish before runner teardown.
-  \item \textbf{Alert fatigue} - regex rule sets grow without bound.
-\end{enumerate}
-\end{frame}
-
-% ================================================================
 \section{Research questions}
 % ================================================================
 
@@ -135,6 +116,30 @@
 \end{frame}
 
 
+% ================================================================
+\section{Problem context}
+% ================================================================
+
+\begin{frame}{Why do we care?}
+\begin{itemize}[<+->]
+  \item CI/CD emits \alert{$\approx$ 10-20 GB} of build, test \& deploy logs \textit{per day}. 
+  \item Manual \texttt{grep} slows the merge queue; critical faults slip through.
+  \item Business \textbf{Service-Level Objective}: feedback within \alert{\(\le\) 200 ms} per pipeline.
+  \item Logs may expose customer IDs, therefore they must remain on-premises (no cloud export).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Operational pain points}
+\begin{enumerate}[<+->]
+  \item \textbf{Context-sensitivity} - identical tokens can be harmless or fatal.
+  \item \textbf{Concept drift} - each merge may rename tests or switches.
+  \item \textbf{Latency pressure} - analysis must finish before runner teardown.
+  \item \textbf{Alert fatigue} - regex rule sets grow without bound.
+\end{enumerate}
+\end{frame}
+
+% ================================================================
+
 
 % ================================================================
 \section{Method}
@@ -148,7 +153,7 @@
       \item \textbf{Normalise} - strip timestamps, colours, IDs.
       \item \textbf{Tokenise} into uni- and bi-grams.
       \item Weight with \tfidf.
-      \item Produce \(50\,000\)-dimensional sparse vector; \(>10^{5}\) lines / s on one core.
+      \item Produce sparse vector.
     \end{enumerate}
   \column{.45\linewidth}
     \centering
@@ -160,28 +165,6 @@
 \end{columns}
 \end{frame}
 
-% \subsection{Algorithms}
-% \begin{frame}{Isolation Forest \ding{173} - intuition}
-% \begin{columns}
-%   \column{.55\linewidth}
-%   \begin{itemize}[<+->]
-%     \item Random binary partitioning isolates unusual lines in fewer splits.
-%     \item Score \(s(x)=2^{-h(x)/c(n)}\) $\in$ [0,1] \\ if high $\rightarrow$ outlier.
-%     \item CPU-only: \( \approx 30\,\mu s\) per line.
-%   \end{itemize}
-%   \column{.45\linewidth}
-%     \centering
-%     \begin{adjustbox}{max width=.95\linewidth}
-%       \begin{tikzpicture}[scale=.8]
-%         \draw[fill=blockgray] (0,0) rectangle (3,3);
-%         \node at (3.2,-0.5){feature 1};
-%         \node[box,minimum width=.9cm,minimum height=.7cm] at (.7,.8){outlier};
-%         \node[box,minimum width=.9cm,minimum height=.7cm] at (2.4,2.1){normal};
-%         \draw[dashed] (1.5,0)--(1.5,3) (-1,1.45)--(4,1.45);
-%       \end{tikzpicture}
-%     \end{adjustbox}
-% \end{columns}
-% \end{frame}
 
 \subsection{Algorithms}
 \begin{frame}{Isolation Forest \ding{173} - intuition}
@@ -194,66 +177,46 @@
   \end{itemize}
   \column{.45\linewidth}
     \centering
-    \begin{tikzpicture}[%
+\begin{tikzpicture}[%
   level distance = 1.3cm,
   level 1/.style={sibling distance=1.4cm},
   level 2/.style={sibling distance=0.8cm},
   every node/.style={circle, draw, minimum size=6mm, inner sep=0pt},
-  normal/.style  ={fill=gray!10},
-  potout/.style   ={fill=blue!60},
-  outlier/.style  ={fill=red!70},
-  empty/.style    ={fill=white}
+  normal/.style  ={fill=white!10},
+  potout/.style  ={fill=yellow!60},
+  outlier/.style ={fill=red!70},
+  empty/.style   ={fill=white}
 ]
 
-% --- Baum --------------------------------------------------------
-\node[empty] {}                                 % root
-  child {node[empty] {}                         % linke Teilwurzel
-    child {node[potout] {}}                     % potenzieller Outlier
-    child {node[empty] {}
-      child {node[empty] {}}
-      child {node[potout] {}}
+  % --- Baum --------------------------------------------------------
+  \node[empty] {}                                 % root
+    child {node[empty] {}                         % linke Teilwurzel
+      child {node[potout] {}}                     % potenzieller Outlier
+      child {node[empty] {}
+        child {node[empty] {}}
+        child {node[potout] {}}
+      }
     }
-  }
-  child {node[outlier] {}};                     % echter Outlier rechts
+    child {node[outlier] {}};                     % echter Outlier rechts
 
-% --- Legende -----------------------------------------------------
-\begin{scope}[xshift=2.cm, yshift=-0.1cm, every node/.style={anchor=west}]
-  \node[normal]  (n1) at (0,0)   {}; \node at (0.6,0)   {normal};
-  \node[potout]  (n2) at (0,-0.6){}; \node at (0.6,-0.6){potential outlier};
-  \node[outlier] (n3) at (0,-1.2){}; \node at (0.6,-1.2){outlier};
-\end{scope}
+  % --- Legende -----------------------------------------------------
+  \begin{scope}[xshift=2.2cm, yshift=-0.1cm]
+    % Kreise für Legende
+    \node[circle,draw,minimum size=6mm,inner sep=0pt,normal]  at (0,0)    {};
+    \node[circle,draw,minimum size=6mm,inner sep=0pt,potout]  at (0,-0.7) {};
+    \node[circle,draw,minimum size=6mm,inner sep=0pt,outlier] at (0,-1.4) {};
+
+    % Text‑Labels – hier den Kreisstil abschalten:
+    \node[anchor=west,shape=rectangle,draw=none] at (0.8,  0)   {normal};
+    \node[anchor=west,shape=rectangle,draw=none] at (0.8,-0.7) {potential outlier};
+    \node[anchor=west,shape=rectangle,draw=none] at (0.8,-1.4) {outlier};
+  \end{scope}
+
 \end{tikzpicture}
+
 
 \end{columns}
 \end{frame}
-
-% \begin{frame}{Random Forest \ding{174} - error labelling}
-% \begin{columns}
-%   \column{.55\linewidth}
-%   \begin{itemize}[<+->]
-%     \item Converts \IForest-flagged lines into 7 domain labels.
-%     \item Majority vote \Rightarrow deterministic, auditable output.
-%     \item Nightly retrain < 90 s; warm-start supports drift handling.
-%   \end{itemize}
-%   \column{.45\linewidth}
-%     \centering
-%     \begin{adjustbox}{max width=.9\linewidth}
-%       \begin{tikzpicture}[node distance=1cm]
-%         \node[box,text width=1.8cm]{vector};
-%         \node[box,right=1.8cm of {$(current bounding box.east)!0.5!(current bounding box.east)$},text width=1.8cm] (t1){tree 1};
-%         \node[box,below=of t1,text width=1.8cm] (t2){tree 2};
-%         \node[box,below=of t2,text width=1.8cm] (t3){tree ...};
-%         \node[box,right=1.8cm of t2,text width=2.1cm] (vote){label};
-%         \draw[arr] (0,0) -- (t1.west);
-%         \draw[arr] (0,0) -- (t2.west);
-%         \draw[arr] (0,0) -- (t3.west);
-%         \draw[arr] (t1) -- (vote);
-%         \draw[arr] (t2) -- (vote);
-%         \draw[arr] (t3) -- (vote);
-%       \end{tikzpicture}
-%     \end{adjustbox}
-% \end{columns}
-% \end{frame}
 
 \begin{frame}{Random Forest \ding{174} - error labelling}
 \begin{columns}
@@ -324,19 +287,11 @@
   \begin{itemize}[<+->]
      \item 117 k \textit{macOS} logs + 655 k \textit{OpenSSH} logs
      \item 504 labelled anomalies (class imbalance $\approx$ 1 : 200)
-     \item Split 70 / 15 / 15 \% (train / val / test)
-     \item Metrics: Macro-F\textsubscript{1}, AUPRC, 99.9th-percentile latency
+     \item Split 70 / 15 / 15 \% (training / validation / testing)
+     \item Metrics: Precision, Recall and $F_{1}$
   \end{itemize}
   \column{.45\linewidth}
     \centering
-    % simple mini diagram only, no scaling
-    % \begin{tikzpicture}[node distance=.9cm]
-    %   \node[box,text width=2.5cm]{raw logs};
-    %   \node[box,below=of {$(current bounding box.east)!0.5!(current bounding box.east)$}] (norm){normalise};
-    %   \node[box,below=of norm,text width=2cm] (vec){TF-IDF};
-    %   \draw[arr] (0,-0.52) -- (norm.west);
-    %   \draw[arr] (norm) -- (vec);
-    % \end{tikzpicture}
 
     \begin{tikzpicture}[node distance=1cm,
       box/.style={
@@ -358,42 +313,23 @@
 \section{Results}
 % ================================================================
 
-% \begin{frame}{Headline numbers}
-% \centering
-% \begin{tabular}{lccc}
-%   \toprule
-%    \& Precision \& Recall \& F\textsubscript{1} \\
-%   \midrule
-%   Detection (\IForest) \& 0.91 \& 0.88 \& 0.89 \\
-%   Classification (\RForest) \& 0.99 \& 0.99 \& 0.99 \\
-%   \bottomrule
-% \end{tabular}
-
-% \begin{frame}{Headline numbers}
-% \centering
-% \begin{tabular}{lccc}
-%   \toprule
-%    & Precision & Recall & F\textsubscript{1} \\
-%   \midrule
-%   Detection (\IForest) & 0.91 & 0.88 & 0.89 \\
-%   Classification (\RForest) & 0.99 & 0.99 & 0.99 \\
-%   \bottomrule
-% \end{tabular}
 
 \begin{frame}{Headline numbers}
 \centering
 \begin{tabular}{lccc}
   \toprule
-   & Precision & Recall & F\textsubscript{1} \\
+   & Precision & Recall & $F_{1}$ \\
   \midrule
   Detection (\IForest) & 0.91 & 0.88 & 0.89 \\
   Classification (\RForest) & 0.99 & 0.99 & 0.99 \\
+  \midrule
+  Regex Baseline & 0.286 & 0.286 & 0.286 \\
   \bottomrule
 \end{tabular}
 
 \vspace{.8em}
 \small
-Throughput: 45 000 lines/s \;|\; 99.9th‑percentile latency: 37 ms
+$F_{1} = 2 \cdot \frac{P \cdot R}{P + R}$
 \end{frame}
 
 % ================================================================
