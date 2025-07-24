@@ -6,8 +6,7 @@
 % ------------------------------------------------------------------
 \usetheme{metropolis}
 \metroset{progressbar=frametitle}
-\setbeamertemplate{frame numbering}[fraction] % 1/12 unten rechts
-\definecolor{blockgray}{RGB}{225,225,225}  % ~20 % gray
+\definecolor{blockgray}{RGB}{225,225,225}
 
 % --------------------------------------------------------------
 % Encoding & fonts
@@ -15,10 +14,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
-\usepackage{microtype}      % nicer text
 \usepackage{pifont}
 \usepackage{booktabs}
-\usepackage{fontawesome5}   % icons, falls noch genutzt
+\usepackage{fontawesome5}
 
 % --------------------------------------------------------------
 % TikZ & PGFPlots
@@ -52,6 +50,31 @@
 }
 
 % --------------------------------------------------------------
+% Bibliography (biblatex)
+% --------------------------------------------------------------
+\usepackage[backend=biber,style=numeric,sorting=none,maxbibnames=3,
+            url=false,doi=false,eprint=false]{biblatex}
+\addbibresource{references.bib}
+
+% alle Quellen auch zeigen, falls nicht zitiert
+\nocite{*}
+
+% Felder säubern (falls Style sie doch zieht)
+\AtEveryBibitem{%
+  \clearfield{urldate}\clearfield{note}\clearfield{isbn}
+  \clearlist{location}\clearlist{publisher}
+}
+
+% kleines Bib-Layout
+\renewcommand*{\bibfont}{\tiny}
+\setlength{\bibitemsep}{0.15ex}
+
+% inline-source macro
+\newcommand{\src}[1]{\footnotesize\cite{#1}}
+
+\usepackage{multicol}
+
+% --------------------------------------------------------------
 % Meta data
 % --------------------------------------------------------------
 \title{Use of AI for Log Analysis in CI/CD Pipelines}
@@ -67,14 +90,8 @@
 \begin{document}
 % ==============================================================
 
-% ----------------------------------------------------------------
-% Title slide
-% ----------------------------------------------------------------
 \maketitle
 
-% ----------------------------------------------------------------
-% Agenda slide
-% ----------------------------------------------------------------
 \begin{frame}{Road map}
   \tableofcontents[hideallsubsections]
 \end{frame}
@@ -92,18 +109,25 @@
       box/.style = {rectangle, draw, rounded corners=3pt,
                     text width = 4.6cm, align = center,
                     minimum height = 1.05cm,
-                    font = \small, fill = blockgray}
+                    font = \small, fill = blockgray},
+      arr/.style = {-{Stealth[length=3mm,width=2mm]}, thick}
     ]
     \node[box,text width=5cm] (main)
       {\textbf{RQ\textsubscript{main}}:\\[2pt]
        How can AI improve accuracy \& explainability\\
        of CI/CD log analysis?}
-      child { node[box,text width=4.3cm]
-        {\textbf{RQ1}: Capability of a cloud LLM (ChatGPT) to interpret logs} }
-      child { node[box,text width=4.3cm]
-        {\textbf{RQ2}: How does a local IF+RF stack compare?} }
-      child { node[box,text width=4.3cm]
-        {\textbf{RQ3}: Integration hurdles inside existing pipelines} };
+      child {
+        node[box,text width=4.3cm]
+          {\textbf{RQ1}: Capability of a cloud LLM (ChatGPT)\\to interpret logs}
+      }
+      child {
+        node[box,text width=4.3cm]
+          {\textbf{RQ2}: How does a local IF+RF stack compare?}
+      }
+      child {
+        node[box,text width=4.3cm]
+          {\textbf{RQ3}: Integration hurdles inside existing pipelines}
+      };
   \end{tikzpicture}
 \end{frame}
 
@@ -113,7 +137,7 @@
 
 \begin{frame}{Why do we care?}
 \begin{itemize}[<+->]
-  \item CI/CD emits \alert{$\approx$ 10--20 GB} of build, test \& deploy logs \textit{per day}.
+  \item CI/CD emits \alert{$\approx$ 10--20 GB} of build, test \& deploy logs per day. \src{splunkObservability2023}
   \item Manual \texttt{grep} slows the merge queue; critical faults slip through.
   \item Business \textbf{Service-Level Objective}: feedback within \alert{$\le 200$ ms} per pipeline.
   \item Logs may expose customer IDs, therefore they must remain on-premises (no cloud export).
@@ -123,9 +147,9 @@
 \begin{frame}{Operational pain points}
 \begin{enumerate}[<+->]
   \item \textbf{Context-sensitivity} -- identical tokens can be harmless or fatal.
-  \item \textbf{Concept drift} -- each merge may rename tests or switches.
-  \item \textbf{Latency pressure} -- analysis must finish before the job completes.
-  \item \textbf{Alert fatigue} -- regex rule sets grow without bound.
+  \item \textbf{Concept drift} -- each merge may rename tests or switches. \src{Gama2014CD}
+  \item \textbf{Latency pressure} -- analysis must finish before runner teardown.
+  \item \textbf{Alert fatigue} -- regex rule sets grow without bound. \src{XuLogSurvey2021}
 \end{enumerate}
 \end{frame}
 
@@ -158,13 +182,13 @@
 \begin{columns}
   \column{.55\linewidth}
   \begin{itemize}[<+->]
-    \item Random binary partitioning isolates unusual lines in fewer splits.
+    \item Random binary partitioning isolates unusual lines in fewer splits. \src{liuIsolationForest}
     \item Score \(s(x)=2^{-h(x)/c(n)} \in [0,1]\); high $\Rightarrow$ outlier.
-    \item CPU-only: \(\approx 30\,\mu s\) per line.
+    \item CPU-only: \(\approx 30\,\mu s\) per line (prototype measurement).
   \end{itemize}
   \column{.45\linewidth}
     \centering
-\begin{tikzpicture}[
+\begin{tikzpicture}[%
   level distance = 1.3cm,
   level 1/.style={sibling distance=1.4cm},
   level 2/.style={sibling distance=0.8cm},
@@ -180,12 +204,10 @@
       child {node[empty] {}
         child {node[empty] {}}
         child {node[potout] {}}
-      }
-    }
+      }}
     child {node[outlier] {}};
 
-  % Legend
-  \begin{scope}[xshift=2.2cm, yshift=-0.1cm]
+  \begin{scope}[xshift=1.7cm, yshift=+0.1cm]
     \node[circle,draw,minimum size=6mm,inner sep=0pt,normal]  at (0,0)    {};
     \node[circle,draw,minimum size=6mm,inner sep=0pt,potout]  at (0,-0.7) {};
     \node[circle,draw,minimum size=6mm,inner sep=0pt,outlier] at (0,-1.4) {};
@@ -201,8 +223,8 @@
 \begin{columns}
   \column{.55\linewidth}
   \begin{itemize}[<+->]
-    \item Maps each flagged line to a domain-specific error category.
-    \item Majority vote $\Rightarrow$ deterministic, auditable output.
+    \item Maps each flagged line to a domain-specific error category. \src{Breiman2001RF}
+    \item Majority vote = deterministic, auditable output.
     \item Nightly retrain $<$ 90 s; warm-start handles drift.
   \end{itemize}
   \column{.45\linewidth}
@@ -229,7 +251,7 @@
 \section{Architecture}
 % ================================================================
 
-\begin{frame}{End-to-end pipeline ($< 40$ ms inline)}
+\begin{frame}{End-to-end pipeline (< 40 ms inline)}
 \centering
 \begin{adjustbox}{max width=.98\linewidth,max height=.9\textheight}
   \begin{tikzpicture}[node distance=1.2cm and 1.8cm]
@@ -262,7 +284,7 @@
 \begin{columns}
   \column{.55\linewidth}
   \begin{itemize}[<+->]
-     \item 117 k \textit{macOS} logs + 655 k \textit{OpenSSH} logs
+     \item 117 k \textit{macOS} logs + 655 k \textit{OpenSSH} logs. \src{zhu2023loghublargecollectionlog}
      \item 504 labelled anomalies (class imbalance $\approx$ 1 : 200)
      \item Split 70 / 15 / 15 \% (training / validation / testing)
      \item Metrics: Precision, Recall and $F_{1}$
@@ -294,16 +316,16 @@
   \toprule
    & Precision & Recall & $F_{1}$ \\
   \midrule
-  Detection (\IForest)        & 0.91 & 0.88 & 0.89 \\
-  Classification (\RForest)   & 0.99 & 0.99 & 0.99 \\
-  \addlinespace
-  Regex baseline              & 0.286 & 0.286 & 0.286 \\
+  Detection (\IForest) & 0.91 & 0.88 & 0.89 \\
+  Classification (\RForest) & 0.99 & 0.99 & 0.99 \\
+  \midrule
+  Regex Baseline & 0.286 & 0.286 & 0.286 \\
   \bottomrule
 \end{tabular}
 
 \vspace{.8em}
 \small
-$F_{1} = 2 \cdot \dfrac{P \cdot R}{P + R}$
+$F_{1} = 2 \cdot \frac{P \cdot R}{P + R}$
 \end{frame}
 
 % ================================================================
@@ -319,9 +341,18 @@ $F_{1} = 2 \cdot \dfrac{P \cdot R}{P + R}$
 \end{frame}
 
 % ================================================================
+% REFERENCES (one slide)
+% ================================================================
+\begin{frame}{References}
+  \tiny
+  \begin{multicols}{2}
+    \printbibliography[heading=none]
+  \end{multicols}
+\end{frame}
+
+% ================================================================
 \section{Wrap-up}
 % ================================================================
-
 \begin{frame}{Take-away}
 \vspace{2em}
 \centering
